@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ox-Bridge API Tester</title>
+<style>
+:root {
+    --bg:#0a0a0f; --surface:#13131a; --surface2:#1c1c26;
+    --border:#2a2a3a; --accent:#6c63ff; --accent2:#00e5a0;
+    --danger:#ff4f6a; --warn:#ffb830; --text:#e8e8f0; --muted:#6b6b80;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Courier New',monospace;padding:20px;}
+h1{background:linear-gradient(90deg,#6c63ff,#00e5a0);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:1.8rem;margin-bottom:4px;}
+.sub{color:var(--muted);font-size:13px;margin-bottom:20px;}
+
+/* BASE URL BAR */
+.url-bar{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;gap:10px;align-items:center;margin-bottom:20px;}
+.url-bar input{flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-family:monospace;font-size:13px;outline:none;}
+.url-bar input:focus{border-color:var(--accent);}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s;}
+.dot.on{background:var(--accent2);box-shadow:0 0 8px var(--accent2);}
+.dot.off{background:var(--danger);}
+
+/* TABS */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;}
+.tab{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:12px;cursor:pointer;transition:all .2s;font-family:monospace;}
+.tab:hover{border-color:var(--accent);color:var(--text);}
+.tab.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* SECTIONS */
+.section{display:none;flex-direction:column;gap:14px;}
+.section.active{display:flex;}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;}
+.card-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+.method{font-size:10px;padding:3px 8px;border-radius:5px;letter-spacing:1px;font-weight:700;}
+.GET{background:rgba(0,229,160,.15);color:var(--accent2);}
+.POST{background:rgba(108,99,255,.15);color:var(--accent);}
+.DELETE{background:rgba(255,79,106,.15);color:var(--danger);}
+.endpoint{font-size:13px;flex:1;}
+.desc{font-size:11px;color:var(--muted);}
+.card-body{padding:16px;display:flex;flex-direction:column;gap:10px;}
+
+/* FIELDS */
+.field label{font-size:11px;color:var(--muted);display:block;margin-bottom:4px;letter-spacing:.5px;}
+.field input,.field select,.field textarea{
+    width:100%;padding:9px 12px;background:var(--surface2);
+    border:1px solid var(--border);border-radius:8px;color:var(--text);
+    font-family:monospace;font-size:13px;outline:none;transition:border-color .2s;
+}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);}
+.field select option{background:var(--surface2);}
+.field textarea{resize:vertical;min-height:80px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;}
+
+/* BUTTONS */
+.btn{padding:9px 18px;border-radius:8px;border:none;font-family:monospace;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover{background:#5a52e0;}
+.btn-success{background:rgba(0,229,160,.15);color:var(--accent2);border:1px solid rgba(0,229,160,.3);}
+.btn-success:hover{background:rgba(0,229,160,.25);}
+.btn-danger{background:rgba(255,79,106,.15);color:var(--danger);border:1px solid rgba(255,79,106,.3);}
+.btn-danger:hover{background:rgba(255,79,106,.25);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* RESPONSE */
+.res{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-all;max-height:240px;overflow-y:auto;display:none;margin-top:4px;}
+.res.show{display:block;}
+.res.ok{color:var(--accent2);border-color:rgba(0,229,160,.2);}
+.res.err{color:var(--danger);border-color:rgba(255,79,106,.2);}
+.res.loading{color:var(--warn);}
+
+/* TOKEN BAR */
+.token-bar{background:rgba(0,229,160,.06);border:1px solid rgba(0,229,160,.2);border-radius:10px;padding:10px 14px;font-size:11px;color:var(--accent2);display:none;word-break:break-all;margin-bottom:4px;}
+.token-bar.show{display:block;}
+
+/* AI CHAT */
+.chat-box{height:300px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;}
+.chat-msg{max-width:80%;padding:10px 13px;border-radius:12px;font-size:13px;line-height:1.5;}
+.chat-msg.user{background:var(--accent);align-self:flex-end;border-radius:12px 12px 4px 12px;}
+.chat-msg.ai{background:var(--surface2);border:1px solid var(--border);align-self:flex-start;border-radius:12px 12px 12px 4px;}
+.chat-msg .role{font-size:10px;color:rgba(255,255,255,.6);margin-bottom:4px;}
+.chat-input-row{display:flex;gap:8px;}
+.chat-input-row input{flex:1;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:monospace;font-size:13px;outline:none;}
+.chat-input-row input:focus{border-color:var(--accent);}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:var(--surface);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px;}
+</style>
+</head>
+<body>
+
+<h1>OX-BRIDGE API Tester</h1>
+<p class="sub">Test all endpoints • Powered by Ox-Bridge Technology 🇳🇬</p>
+
+<!-- BASE URL -->
+<div class="url-bar">
+    <span style="font-size:11px;color:var(--accent2);white-space:nowrap;">BASE URL</span>
+    <input id="base-url" value="https://ox-bridge-learning.onrender.com">
+    <div class="dot" id="status-dot"></div>
+    <button class="btn btn-success" onclick="ping()">Ping</button>
+</div>
+
+<!-- TOKEN -->
+<div class="token-bar" id="token-bar">
+    <div style="color:var(--muted);font-size:10px;margin-bottom:4px;">🔑 SAVED TOKEN (auto-used on all requests)</div>
+    <span id="token-display"></span>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+    <button class="tab active" onclick="switchTab('auth')">🔐 Auth</button>
+    <button class="tab" onclick="switchTab('profile')">👤 Profile</button>
+    <button class="tab" onclick="switchTab('learn')">📚 Learn</button>
+    <button class="tab" onclick="switchTab('quiz')">🧠 Quiz</button>
+    <button class="tab" onclick="switchTab('aichat')">🤖 AI Chat</button>
+    <button class="tab" onclick="switchTab('daily')">⚡ Daily</button>
+    <button class="tab" onclick="switchTab('pastq')">📝 Past Q</button>
+    <button class="tab" onclick="switchTab('games')">🎮 Games</button>
+    <button class="tab" onclick="switchTab('admin')">🛠 Admin</button>
+    <button class="tab" onclick="switchTab('social')">🏆 Social</button>
+</div>
+
+<!-- ===== AUTH ===== -->
+<div class="section active" id="tab-auth">
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/signup</span><span class="desc">Create account</span></div>
+        <div class="card-body">
+            <div class="grid3">
+                <div class="field"><label>USERNAME</label><input id="su-user" placeholder="e.g. Goodnews"></div>
+                <div class="field"><label>EMAIL</label><input id="su-email" placeholder="you@email.com"></div>
+                <div class="field"><label>PASSWORD</label><input id="su-pass" type="password" placeholder="min 6 chars"></div>
+            </div>
+            <button class="btn btn-primary" onclick="doSignup()">Create Account</button>
+            <div class="res" id="r-signup"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/login</span><span class="desc">Login & save token</span></div>
+        <div class="card-body">
+            <div class="grid2">
+                <div class="field"><label>USERNAME</label><input id="li-user" placeholder="Your username"></div>
+                <div class="field"><label>PASSWORD</label><input id="li-pass" type="password" placeholder="Your password"></div>
+            </div>
+            <button class="btn btn-primary" onclick="doLogin()">Login</button>
+            <div class="res" id="r-login"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/validate-token</span><span class="desc">Check if token is still valid</span></div>
+        <div class="card-body">
+            <button class="btn btn-success" onclick="doValidate()">Validate Saved Token</button>
+            <div class="res" id="r-validate"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== PROFILE ===== -->
+<div class="section" id="tab-profile">
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/profile/{username}</span><span class="desc">Get full profile</span></div>
+        <div class="card-body">
+            <div class="field"><label>USERNAME</label><input id="gp-user" placeholder="Enter username"></div>
+            <button class="btn btn-primary" onclick="getProfile()">Get Profile</button>
+            <div class="res" id="r-getprofile"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/profile/update</span><span class="desc">Update profile</span></div>
+        <div class="card-body">
+            <div class="grid3">
+                <div class="field"><label>USERNAME</label><input id="up-user" placeholder="Your username"></div>
+                <div class="field"><label>FULL NAME</label><input id="up-name" placeholder="e.g. Goodnews Solomon"></div>
+                <div class="field"><label>BIO</label><input id="up-bio" placeholder="e.g. JSS3 student"></div>
+            </div>
+            <button class="btn btn-primary" onclick="updateProfile()">Update Profile</button>
+            <div class="res" id="r-updateprofile"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/badges/{username}</span><span class="desc">Get user badges</span></div>
+        <div class="card-body">
+            <div class="field"><label>USERNAME</label><input id="b-user" placeholder="Enter username"></div>
+            <button class="btn btn-primary" onclick="getBadges()">Get Badges</button>
+            <div class="res" id="r-badges"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== LEARN ===== -->
+<div class="section" id="tab-learn">
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/learn/{topic}</span><span class="desc">AI explains a topic</span></div>
+        <div class="card-body">
+            <div class="grid3">
+                <div class="field"><label>TOPIC</label><input id="l-topic" placeholder="e.g. Photosynthesis"></div>
+                <div class="field"><label>USERNAME</label><input id="l-user" placeholder="Your username"></div>
+                <div class="field"><label>SUBJECT</label><input id="l-subj" placeholder="e.g. Biology"></div>
+            </div>
+            <div class="field">
+                <label>LEVEL</label>
+                <select id="l-level"><option>Nursery</option><option>Primary</option><option>JSS</option><option selected>SSS</option><option>WAEC</option><option>JAMB</option><option>University</option></select>
+            </div>
+            <button class="btn btn-primary" onclick="doLearn()">✨ Get Lesson</button>
+            <div class="res" id="r-learn"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/study/log</span><span class="desc">Log a study session</span></div>
+        <div class="card-body">
+            <div class="grid2">
+                <div class="field"><label>USERNAME</label><input id="sl-user" placeholder="Your username"></div>
+                <div class="field"><label>TOPIC</label><input id="sl-topic" placeholder="e.g. Photosynthesis"></div>
+                <div class="field"><label>SUBJECT</label><input id="sl-subj" placeholder="e.g. Biology"></div>
+                <div class="field"><label>LEVEL</label><select id="sl-level"><option>Nursery</option><option>Primary</option><option>JSS</option><option selected>SSS</option><option>WAEC</option><option>JAMB</option><option>University</option></select></div>
+            </div>
+            <button class="btn btn-primary" onclick="logStudy()">📝 Log Study</button>
+            <div class="res" id="r-studylog"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== QUIZ ===== -->
+<div class="section" id="tab-quiz">
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/quiz/{topic}</span><span class="desc">Generate quiz (DB first, AI fallback)</span></div>
+        <div class="card-body">
+            <div class="grid3">
+                <div class="field"><label>TOPIC</label><input id="qz-topic" placeholder="e.g. Algebra"></div>
+                <div class="field"><label>SUBJECT</label><input id="qz-subj" placeholder="e.g. Mathematics"></div>
+                <div class="field"><label>LEVEL</label><select id="qz-level"><option>Nursery</option><option>Primary</option><option>JSS</option><option selected>SSS</option><option>WAEC</option><option>JAMB</option><option>University</option></select></div>
+            </div>
+            <button class="btn btn-primary" onclick="doQuiz()">🧠 Generate Quiz</button>
+            <div class="res" id="r-quiz"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/quiz/save-result</span><span class="desc">Save a quiz score</span></div>
+        <div class="card-body">
+            <div class="grid3">
+                <div class="field"><label>USERNAME</label><input id="qr-user" placeholder="Username"></div>
+                <div class="field"><label>SUBJECT</label><input id="qr-subj" placeholder="Mathematics"></div>
+                <div class="field"><label>LEVEL</label><select id="qr-level"><option>JSS</option><option selected>SSS</option><option>WAEC</option><option>JAMB</option></select></div>
+                <div class="field"><label>TOPIC</label><input id="qr-topic" placeholder="Algebra"></div>
+                <div class="field"><label>SCORE</label><input id="qr-score" type="number" placeholder="4"></div>
+                <div class="field"><label>TOTAL QUESTIONS</label><input id="qr-total" type="number" placeholder="5"></div>
+            </div>
+            <button class="btn btn-primary" onclick="saveQuizResult()">Save Result</button>
+            <div class="res" id="r-quizresult"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/quiz/history/{username}</span><span class="desc">Quiz history</span></div>
+        <div class="card-body">
+            <div class="field"><label>USERNAME</label><input id="qh-user" placeholder="Username"></div>
+            <button class="btn btn-primary" onclick="getQuizHistory()">Get History</button>
+            <div class="res" id="r-quizhistory"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/quiz/stats/{username}</span><span class="desc">Quiz statistics</span></div>
+        <div class="card-body">
+            <div class="field"><label>USERNAME</label><input id="qs-user" placeholder="Username"></div>
+            <button class="btn btn-primary" onclick="getQuizStats()">Get Stats</button>
+            <div class="res" id="r-quizstats"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== AI CHAT ===== -->
+<div class="section" id="tab-aichat">
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/ai/chat</span><span class="desc">🆕 AI Chat Space — free conversation with AI tutor</span></div>
+        <div class="card-body">
+            <div class="grid3">
+                <div class="field"><label>USERNAME</label><input id="ac-user" placeholder="Your username"></div>
+                <div class="field"><label>SUBJECT</label><input id="ac-subj" value="General" placeholder="e.g. Biology"></div>
+                <div class="field"><label>LEVEL</label><select id="ac-level"><option>Nursery</option><option>Primary</option><option>JSS</option><option selected>SSS</option><option>WAEC</option><option>JAMB</option><option>University</option></select></div>
+            </div>
+            <div class="chat-box" id="chat-box"></div>
+            <div class="chat-input-row">
+                <input id="ac-msg" placeholder="Ask the AI tutor anything..." onkeydown="if(event.key==='Enter') sendChat()">
+                <button class="btn btn-primary" onclick="sendChat()">Send</button>
+                <button class="btn btn-danger" onclick="clearChat()" title="Clear history">🗑</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/ai/chat/history/{username}</span><span class="desc">Get chat history</span></div>
+        <div class="card-body">
+            <div class="field"><label>USERNAME</label><input id="ach-user" placeholder="Username"></div>
+            <button class="btn btn-primary" onclick="getChatHistory()">Get History</button>
+            <div class="res" id="r-chathistory"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== DAILY CHALLENGE ===== -->
+<div class="section" id="tab-daily">
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/daily-challenge</span><span class="desc">Get today's challenge</span></div>
+        <div class="card-body">
+            <button class="btn btn-primary" onclick="getDaily()">Get Daily Challenge</button>
+            <div class="res" id="r-daily"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/daily-challenge/submit</span><span class="desc">Submit answer</span></div>
+        <div class="card-body">
+            <div class="grid2">
+                <div class="field"><label>USERNAME</label><input id="ds-user" placeholder="Your username"></div>
+                <div class="field"><label>ANSWER (A/B/C/D)</label><input id="ds-ans" placeholder="e.g. B" maxlength="1"></div>
+            </div>
+            <button class="btn btn-primary" onclick="submitDaily()">Submit Answer</button>
+            <div class="res" id="r-dailysubmit"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== PAST QUESTIONS ===== -->
+<div class="section" id="tab-pastq">
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/past-questions/random/{subject}</span><span class="desc">Random past question</span></div>
+        <div class="card-body">
+            <div class="grid2">
+                <div class="field"><label>SUBJECT</label><input id="pq-subj" placeholder="e.g. Mathematics"></div>
+                <div class="field"><label>EXAM TYPE</label><select id="pq-exam"><option>WAEC</option><option>JAMB</option></select></div>
+            </div>
+            <button class="btn btn-primary" onclick="getPastQ()">Load Question</button>
+            <div class="res" id="r-pastq"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== GAMES ===== -->
+<div class="section" id="tab-games">
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/games/word-scramble/{subject}</span><span class="desc">Word scramble game</span></div>
+        <div class="card-body">
+            <div class="grid2">
+                <div class="field"><label>SUBJECT</label><input id="gw-subj" value="English" placeholder="English"></div>
+                <div class="field"><label>LEVEL</label><select id="gw-level"><option>Nursery</option><option selected>Primary</option><option>JSS</option></select></div>
+            </div>
+            <button class="btn btn-primary" onclick="getWordScramble()">Get Word</button>
+            <div class="res" id="r-wordscramble"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/games/math-challenge/{level}</span><span class="desc">Math challenge</span></div>
+        <div class="card-body">
+            <div class="field"><label>LEVEL</label><select id="gm-level"><option>Nursery</option><option selected>Primary</option><option>JSS</option></select></div>
+            <button class="btn btn-primary" onclick="getMathChallenge()">Get Math Problem</button>
+            <div class="res" id="r-math"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/games/save-score</span><span class="desc">Save game score</span></div>
+        <div class="card-body">
+            <div class="grid3">
+                <div class="field"><label>USERNAME</label><input id="gs-user" placeholder="Username"></div>
+                <div class="field"><label>GAME TYPE</label><select id="gs-type"><option>word_scramble</option><option>spell_challenge</option><option>math_challenge</option><option>treasure_hunt</option></select></div>
+                <div class="field"><label>SCORE</label><input id="gs-score" type="number" placeholder="10"></div>
+            </div>
+            <button class="btn btn-primary" onclick="saveGameScore()">Save Score</button>
+            <div class="res" id="r-gamescore"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== ADMIN ===== -->
+<div class="section" id="tab-admin">
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/admin/add-question</span><span class="desc">Add a manual quiz question to DB</span></div>
+        <div class="card-body">
+            <div class="grid3">
+                <div class="field"><label>SUBJECT</label><input id="aq-subj" placeholder="e.g. Mathematics"></div>
+                <div class="field"><label>LEVEL</label><select id="aq-level"><option>Nursery</option><option>Primary</option><option>JSS</option><option selected>SSS</option><option>WAEC</option><option>JAMB</option><option>University</option></select></div>
+                <div class="field"><label>TOPIC (optional)</label><input id="aq-topic" placeholder="e.g. Algebra"></div>
+            </div>
+            <div class="field"><label>QUESTION TEXT</label><textarea id="aq-qtext" placeholder="Type the question here..."></textarea></div>
+            <div class="grid2">
+                <div class="field"><label>OPTION A</label><input id="aq-a" placeholder="Option A answer"></div>
+                <div class="field"><label>OPTION B</label><input id="aq-b" placeholder="Option B answer"></div>
+                <div class="field"><label>OPTION C</label><input id="aq-c" placeholder="Option C answer"></div>
+                <div class="field"><label>OPTION D</label><input id="aq-d" placeholder="Option D answer"></div>
+            </div>
+            <div class="grid2">
+                <div class="field"><label>CORRECT ANSWER (A/B/C/D)</label><input id="aq-ans" placeholder="e.g. B" maxlength="1"></div>
+                <div class="field"><label>SOURCE (optional)</label><input id="aq-src" placeholder="e.g. WAEC 2022"></div>
+            </div>
+            <div class="field"><label>EXPLANATION (optional)</label><textarea id="aq-expl" placeholder="Explain why the answer is correct..."></textarea></div>
+            <button class="btn btn-primary" onclick="addQuestion()">➕ Add Question to DB</button>
+            <div class="res" id="r-addq"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/admin/questions/count</span><span class="desc">Count questions by subject/level</span></div>
+        <div class="card-body">
+            <button class="btn btn-success" onclick="countQuestions()">Count Questions</button>
+            <div class="res" id="r-qcount"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/admin/questions</span><span class="desc">List questions</span></div>
+        <div class="card-body">
+            <div class="grid2">
+                <div class="field"><label>SUBJECT (optional)</label><input id="lq-subj" placeholder="Filter by subject"></div>
+                <div class="field"><label>LEVEL (optional)</label><input id="lq-level" placeholder="Filter by level"></div>
+            </div>
+            <button class="btn btn-success" onclick="listQuestions()">List Questions</button>
+            <div class="res" id="r-listq"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method DELETE">DELETE</span><span class="endpoint">/admin/question/{id}</span><span class="desc">Delete a question</span></div>
+        <div class="card-body">
+            <div class="field"><label>QUESTION ID</label><input id="dq-id" type="number" placeholder="Enter question ID"></div>
+            <button class="btn btn-danger" onclick="deleteQuestion()">🗑 Delete Question</button>
+            <div class="res" id="r-deleteq"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/cache/status</span><span class="desc">Check AI cache</span></div>
+        <div class="card-body">
+            <button class="btn btn-success" onclick="getCacheStatus()">Check Cache</button>
+            <div class="res" id="r-cache"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== SOCIAL ===== -->
+<div class="section" id="tab-social">
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/leaderboard</span><span class="desc">Top 10 students</span></div>
+        <div class="card-body">
+            <button class="btn btn-primary" onclick="getLeaderboard()">🏆 Load Leaderboard</button>
+            <div class="res" id="r-lb"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method POST">POST</span><span class="endpoint">/progress/add-score</span><span class="desc">Add points to user</span></div>
+        <div class="card-body">
+            <div class="grid2">
+                <div class="field"><label>USERNAME</label><input id="sc-user" placeholder="Username"></div>
+                <div class="field"><label>POINTS</label><input id="sc-pts" type="number" placeholder="10"></div>
+            </div>
+            <button class="btn btn-primary" onclick="addScore()">Add Score</button>
+            <div class="res" id="r-score"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/notifications/{username}</span><span class="desc">Get notifications</span></div>
+        <div class="card-body">
+            <div class="field"><label>USERNAME</label><input id="nn-user" placeholder="Username"></div>
+            <button class="btn btn-primary" onclick="getNotifs()">Get Notifications</button>
+            <div class="res" id="r-notifs"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><span class="method GET">GET</span><span class="endpoint">/study/streak/{username}</span><span class="desc">Get study streak</span></div>
+        <div class="card-body">
+            <div class="field"><label>USERNAME</label><input id="st-user" placeholder="Username"></div>
+            <button class="btn btn-primary" onclick="getStreak()">Get Streak</button>
+            <div class="res" id="r-streak"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let savedToken = '';
+const B = () => document.getElementById('base-url').value.replace(/\/$/, '');
+const H = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + savedToken });
+
+// TABS
+function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById('tab-' + name).classList.add('active');
+}
+
+// RESPONSE DISPLAY
+function show(id, data, ok = true) {
+    const el = document.getElementById(id);
+    el.className = 'res show ' + (ok ? 'ok' : 'err');
+    el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+}
+function loading(id) {
+    const el = document.getElementById(id);
+    el.className = 'res show loading';
+    el.textContent = 'Loading...';
+}
+
+// PING
+async function ping() {
+    const dot = document.getElementById('status-dot');
+    dot.className = 'dot';
+    try {
+        const res = await fetch(B() + '/');
+        dot.className = res.ok ? 'dot on' : 'dot off';
+    } catch { dot.className = 'dot off'; }
+}
+
+// AUTO PING
+window.onload = () => setTimeout(ping, 600);
+
+// ============================================================
+// AUTH
+// ============================================================
+async function doSignup() {
+    loading('r-signup');
+    try {
+        const res  = await fetch(B() + '/signup', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: document.getElementById('su-user').value,
+                email:    document.getElementById('su-email').value,
+                password: document.getElementById('su-pass').value
+            })
+        });
+        show('r-signup', await res.json(), res.ok);
+    } catch (e) { show('r-signup', 'Error: ' + e.message, false); }
+}
+
+async function doLogin() {
+    loading('r-login');
+    try {
+        const u   = document.getElementById('li-user').value.trim();
+        const p   = document.getElementById('li-pass').value.trim();
+        const res = await fetch(`${B()}/login?username=${encodeURIComponent(u)}&password=${encodeURIComponent(p)}`, { method: 'POST' });
+        const d   = await res.json();
+        if (res.ok) {
+            savedToken = d.access_token;
+            document.getElementById('token-display').textContent = savedToken;
+            document.getElementById('token-bar').className = 'token-bar show';
+            // Auto-fill username fields
+            document.querySelectorAll('input[id$="-user"],input[id="ac-user"],input[id="gp-user"],input[id="b-user"],input[id="ach-user"],input[id="ds-user"],input[id="qr-user"],input[id="gs-user"],input[id="qh-user"],input[id="qs-user"],input[id="sl-user"],input[id="l-user"],input[id="sc-user"],input[id="nn-user"],input[id="st-user"]').forEach(el => { if (!el.value) el.value = d.username; });
+        }
+        show('r-login', d, res.ok);
+    } catch (e) { show('r-login', 'Error: ' + e.message, false); }
+}
+
+async function doValidate() {
+    if (!savedToken) return show('r-validate', 'No token saved. Please login first.', false);
+    loading('r-validate');
+    try {
+        const res = await fetch(B() + '/validate-token', { method: 'POST', headers: H(), body: JSON.stringify({ token: savedToken }) });
+        show('r-validate', await res.json(), res.ok);
+    } catch (e) { show('r-validate', 'Error: ' + e.message, false); }
+}
+
+// ============================================================
+// PROFILE
+// ============================================================
+async function getProfile() {
+    const u = document.getElementById('gp-user').value.trim();
+    loading('r-getprofile');
+    try { const res = await fetch(`${B()}/profile/${u}`); show('r-getprofile', await res.json(), res.ok); }
+    catch (e) { show('r-getprofile', 'Error: ' + e.message, false); }
+}
+
+async function updateProfile() {
+    const u = document.getElementById('up-user').value.trim();
+    loading('r-updateprofile');
+    try {
+        const res = await fetch(`${B()}/profile/update?username=${encodeURIComponent(u)}`, {
+            method: 'POST', headers: H(),
+            body: JSON.stringify({ full_name: document.getElementById('up-name').value, bio: document.getElementById('up-bio').value })
+        });
+        show('r-updateprofile', await res.json(), res.ok);
+    } catch (e) { show('r-updateprofile', 'Error: ' + e.message, false); }
+}
+
+async function getBadges() {
+    const u = document.getElementById('b-user').value.trim();
+    loading('r-badges');
+    try { const res = await fetch(`${B()}/badges/${u}`); show('r-badges', await res.json(), res.ok); }
+    catch (e) { show('r-badges', 'Error: ' + e.message, false); }
+}
+
+// ============================================================
+// LEARN
+// ============================================================
+async function doLearn() {
+    const topic = document.getElementById('l-topic').value.trim();
+    const user  = document.getElementById('l-user').value.trim();
+    const subj  = document.getElementById('l-subj').value.trim() || 'General';
+    const level = document.getElementById('l-level').value;
+    loading('r-learn');
+    try {
+        const res = await fetch(`${B()}/learn/${encodeURIComponent(topic)}?username=${encodeURIComponent(user)}&level=${encodeURIComponent(level)}&subject=${encodeURIComponent(subj)}`);
+        show('r-learn', await res.json(), res.ok);
+    } catch (e) { show('r-learn', 'Error: ' + e.message, false); }
+}
+
+async function logStudy() {
+    loading('r-studylog');
+    try {
+        const res = await fetch(`${B()}/study/log`, {
+            method: 'POST', headers: H(),
+            body: JSON.stringify({ username: document.getElementById('sl-user').value, topic: document.getElementById('sl-topic').value, subject: document.getElementById('sl-subj').value || 'General', level: document.getElementById('sl-level').value })
+        });
+        show('r-studylog', await res.json(), res.ok);
+    } catch (e) { show('r-studylog', 'Error: ' + e.message, false); }
+}
+
+// ============================================================
+// QUIZ
+// ============================================================
+async function doQuiz() {
+    const topic = document.getElementById('qz-topic').value.trim();
+    const subj  = document.getElementById('qz-subj').value.trim() || 'General';
+    const level = document.getElementById('qz-level').value;
+    loading('r-quiz');
+    try {
+        const res = await fetch(`${B()}/quiz/${encodeURIComponent(topic||subj)}?subject=${encodeURIComponent(subj)}&level=${encodeURIComponent(level)}`);
+        show('r-quiz', await res.json(), res.ok);
+    } catch (e) { show('r-quiz', 'Error: ' + e.message, false); }
+}
+
+async function saveQuizResult() {
+    loading('r-quizresult');
+    try {
+        const res = await fetch(`${B()}/quiz/save-result`, {
+            method: 'POST', headers: H(),
+            body: JSON.stringify({ username: document.getElementById('qr-user').value, subject: document.getElementById('qr-subj').value, level: document.getElementById('qr-level').value, topic: document.getElementById('qr-topic').value, score: parseInt(document.getElementById('qr-score').value), total_questions: parseInt(document.getElementById('qr-total').value) })
+        });
+        show('r-quizresult', await res.json(), res.ok);
+    } catch (e) { show('r-quizresult', 'Error: ' + e.message, false); }
+}
+
+async function getQuizHistory() {
+    const u = document.getElementById('qh-user').value.trim();
+    loading('r-quizhistory');
+    try { const res = await fetch(`${B()}/quiz/history/${u}`, { headers: H() }); show('r-quizhistory', await res.json(), res.ok); }
+    catch (e) { show('r-quizhistory', 'Error: ' + e.message, false); }
+}
+
+async function getQuizStats() {
+    const u = document.getElementById('qs-user').value.trim();
+    loading('r-quizstats');
+    try { const res = await fetch(`${B()}/quiz/stats/${u}`, { headers: H() }); show('r-quizstats', await res.json(), res.ok); }
+    catch (e) { show('r-quizstats', 'Error: ' + e.message, false); }
+}
+
+// ============================================================
+// AI CHAT
+// ============================================================
+function appendChat(role, text) {
+    const box = document.getElementById('chat-box');
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + (role === 'user' ? 'user' : 'ai');
+    div.innerHTML = `<div class="role">${role === 'user' ? '👤 You' : '🤖 Ox-Bridge AI'}</div><div>${text}</div>`;
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+async function sendChat() {
+    const msg  = document.getElementById('ac-msg').value.trim();
+    const user = document.getElementById('ac-user').value.trim();
+    const subj = document.getElementById('ac-subj').value.trim() || 'General';
+    const lvl  = document.getElementById('ac-level').value;
+    if (!msg || !user) return alert('Please enter username and message');
+
+    appendChat('user', msg);
+    document.getElementById('ac-msg').value = '';
+
+    const typing = document.createElement('div');
+    typing.className = 'chat-msg ai'; typing.id = 'typing';
+    typing.innerHTML = '<div class="role">🤖 Ox-Bridge AI</div><div>Thinking...</div>';
+    document.getElementById('chat-box').appendChild(typing);
+
+    try {
+        const res  = await fetch(`${B()}/ai/chat`, {
+            method: 'POST', headers: H(),
+            body: JSON.stringify({ username: user, message: msg, subject: subj, level: lvl })
+        });
+        const data = await res.json();
+        document.getElementById('typing')?.remove();
+        appendChat('ai', data.response || data.detail || 'No response');
+    } catch (e) {
+        document.getElementById('typing')?.remove();
+        appendChat('ai', 'Error: ' + e.message);
+    }
+}
+
+async function clearChat() {
+    const user = document.getElementById('ac-user').value.trim();
+    if (!user) return alert('Enter username first');
+    try {
+        await fetch(`${B()}/ai/chat/clear`, { method: 'POST', headers: H(), body: JSON.stringify({ username: user }) });
+        document.getElementById('chat-box').innerHTML = '';
+    } catch (e) { alert('Error: ' + e.message); }
+}
+
+async function getChatHistory() {
+    const u = document.getElementById('ach-user').value.trim();
+    loading('r-chathistory');
+    try { const res = await fetch(`${B()}/ai/chat/history/${u}`, { headers: H() }); show('r-chathistory', await res.json(), res.ok); }
+    catch (e) { show('r-chathistory', 'Error: ' + e.message, false); }
+}
+
+document.getElementById('ac-msg').addEventListener('keydown', e => { if (e.key === 'Enter') sendChat(); });
+
+// ============================================================
+// DAILY CHALLENGE
+// ============================================================
+async function getDaily() {
+    loading('r-daily');
+    try { const res = await fetch(`${B()}/daily-challenge`); show('r-daily', await res.json(), res.ok); }
+    catch (e) { show('r-daily', 'Error: ' + e.message, false); }
+}
+
+async function submitDaily() {
+    loading('r-dailysubmit');
+    try {
+        const res = await fetch(`${B()}/daily-challenge/submit`, {
+            method: 'POST', headers: H(),
+            body: JSON.stringify({ username: document.getElementById('ds-user').value, answer: document.getElementById('ds-ans').value })
+        });
+        show('r-dailysubmit', await res.json(), res.ok);
+    } catch (e) { show('r-dailysubmit', 'Error: ' + e.message, false); }
+}
+
+// ============================================================
+// PAST QUESTIONS
+// ============================================================
+async function getPastQ() {
+    const subj = document.getElementById('pq-subj').value.trim();
+    const exam = document.getElementById('pq-exam').value;
+    loading('r-pastq');
+    try { const res = await fetch(`${B()}/past-questions/random/${encodeURIComponent(subj)}?exam=${exam}`); show('r-pastq', await res.json(), res.ok); }
+    catch (e) { show('r-pastq', 'Error: ' + e.message, false); }
+}
+
+// ============================================================
+// GAMES
+// ============================================================
+async function getWordScramble() {
+    const subj  = document.getElementById('gw-subj').value.trim() || 'English';
+    const level = document.getElementById('gw-level').value;
+    loading('r-wordscramble');
+    try { const res = await fetch(`${B()}/games/word-scramble/${encodeURIComponent(subj)}?level=${level}`); show('r-wordscramble', await res.json(), res.ok); }
+    catch (e) { show('r-wordscramble', 'Error: ' + e.message, false); }
+}
+
+async function getMathChallenge() {
+    const level = document.getElementById('gm-level').value;
+    loading('r-math');
+    try { const res = await fetch(`${B()}/games/math-challenge/${level}`); show('r-math', await res.json(), res.ok); }
+    catch (e) { show('r-math', 'Error: ' + e.message, false); }
+}
+
+async function saveGameScore() {
+    loading('r-gamescore');
+    try {
+        const res = await fetch(`${B()}/games/save-score`, {
+            method: 'POST', headers: H(),
+            body: JSON.stringify({ username: document.getElementById('gs-user').value, game_type: document.getElementById('gs-type').value, score: parseInt(document.getElementById('gs-score').value) })
+        });
+        show('r-gamescore', await res.json(), res.ok);
+    } catch (e) { show('r-gamescore', 'Error: ' + e.message, false); }
+}
+
+// ============================================================
+// ADMIN
+// ============================================================
+async function addQuestion() {
+    loading('r-addq');
+    try {
+        const res = await fetch(`${B()}/admin/add-question`, {
+            method: 'POST', headers: H(),
+            body: JSON.stringify({
+                subject:        document.getElementById('aq-subj').value.trim(),
+                level:          document.getElementById('aq-level').value,
+                topic:          document.getElementById('aq-topic').value.trim() || null,
+                question_text:  document.getElementById('aq-qtext').value.trim(),
+                option_a:       document.getElementById('aq-a').value.trim(),
+                option_b:       document.getElementById('aq-b').value.trim(),
+                option_c:       document.getElementById('aq-c').value.trim(),
+                option_d:       document.getElementById('aq-d').value.trim(),
+                correct_answer: document.getElementById('aq-ans').value.trim().toUpperCase(),
+                source:         document.getElementById('aq-src').value.trim() || 'manual',
+                explanation:    document.getElementById('aq-expl').value.trim() || null
+            })
+        });
+        show('r-addq', await res.json(), res.ok);
+    } catch (e) { show('r-addq', 'Error: ' + e.message, false); }
+}
+
+async function countQuestions() {
+    loading('r-qcount');
+    try { const res = await fetch(`${B()}/admin/questions/count`); show('r-qcount', await res.json(), res.ok); }
+    catch (e) { show('r-qcount', 'Error: ' + e.message, false); }
+}
+
+async function listQuestions() {
+    const subj  = document.getElementById('lq-subj').value.trim();
+    const level = document.getElementById('lq-level').value.trim();
+    let   url   = `${B()}/admin/questions?limit=20`;
+    if (subj)  url += `&subject=${encodeURIComponent(subj)}`;
+    if (level) url += `&level=${encodeURIComponent(level)}`;
+    loading('r-listq');
+    try { const res = await fetch(url, { headers: H() }); show('r-listq', await res.json(), res.ok); }
+    catch (e) { show('r-listq', 'Error: ' + e.message, false); }
+}
+
+async function deleteQuestion() {
+    const id = document.getElementById('dq-id').value.trim();
+    if (!id || !confirm(`Delete question #${id}?`)) return;
+    loading('r-deleteq');
+    try { const res = await fetch(`${B()}/admin/question/${id}`, { method: 'DELETE', headers: H() }); show('r-deleteq', await res.json(), res.ok); }
+    catch (e) { show('r-deleteq', 'Error: ' + e.message, false); }
+}
+
+async function getCacheStatus() {
+    loading('r-cache');
+    try { const res = await fetch(`${B()}/cache/status`); show('r-cache', await res.json(), res.ok); }
+    catch (e) { show('r-cache', 'Error: ' + e.message, false); }
+}
+
+// ============================================================
+// SOCIAL
+// ============================================================
+async function getLeaderboard() {
+    loading('r-lb');
+    try { const res = await fetch(`${B()}/leaderboard`); show('r-lb', await res.json(), res.ok); }
+    catch (e) { show('r-lb', 'Error: ' + e.message, false); }
+}
+
+async function addScore() {
+    loading('r-score');
+    try {
+        const res = await fetch(`${B()}/progress/add-score`, {
+            method: 'POST', headers: H(),
+            body: JSON.stringify({ username: document.getElementById('sc-user').value, points: parseFloat(document.getElementById('sc-pts').value) })
+        });
+        show('r-score', await res.json(), res.ok);
+    } catch (e) { show('r-score', 'Error: ' + e.message, false); }
+}
+
+async function getNotifs() {
+    const u = document.getElementById('nn-user').value.trim();
+    loading('r-notifs');
+    try { const res = await fetch(`${B()}/notifications/${u}`, { headers: H() }); show('r-notifs', await res.json(), res.ok); }
+    catch (e) { show('r-notifs', 'Error: ' + e.message, false); }
+}
+
+async function getStreak() {
+    const u = document.getElementById('st-user').value.trim();
+    loading('r-streak');
+    try { const res = await fetch(`${B()}/study/streak/${u}`); show('r-streak', await res.json(), res.ok); }
+    catch (e) { show('r-streak', 'Error: ' + e.message, false); }
+}
+</script>
+</body>
+  </html>
